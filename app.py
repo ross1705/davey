@@ -2,6 +2,21 @@ import os
 import openai
 import time
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import json
+import os
+
+def save_conversation(user_id, user_input, bot_response):
+    filename = f"data/{user_id}.json"
+    conversation = []
+
+    if os.path.exists(filename):
+        with open(filename, 'r') as file:
+            conversation = json.load(file)
+    
+    conversation.append({'user_input': user_input, 'bot_response': bot_response})
+    
+    with open(filename, 'w') as file:
+        json.dump(conversation, file)
 
 # Set API keys
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -59,7 +74,9 @@ def handle_message(update, context):
     if response.data:
         bot_response = response.data[0].content[0].text.value
         update.message.reply_text(bot_response)
-
+        # Save the conversation after sending the response
+        save_conversation(user_id, user_input, bot_response)
+        
 # New function to add a message to an existing thread
 def add_to_thread(thread_id, prompt):
     openai.beta.threads.messages.create(
