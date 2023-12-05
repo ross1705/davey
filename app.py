@@ -27,51 +27,41 @@ def get_or_create_thread(user_id, initial_prompt):
         return thread_id
 
 def handle_message(update, context):
+    user_id = update.message.from_user.id  # Get the unique user ID
     user_input = update.message.text
-    user_id = update.message.from_user.id
 
-    # Check if the user already has an active thread
     if user_id not in user_threads:
-        # Create a new thread with the initial message
-        thread = openai.beta.threads.create(
-            messages=[{
-                "role": "user",
-                "content": user_input
-            }]
-        )
-        user_threads[user_id] = thread.id
+        # If this user doesn't have a thread yet, create one
+        my_run_id, my_thread_id = create_thread(assistant_id, user_input)
+        user_threads[user_id] = my_thread_id  # Store the thread ID for this user
+    else:
+        # If the user already has a thread, use it
+        my_thread_id = user_threads[user_id]
+        my_run_id = add_to_thread(my_thread_id, user_input)  # Function to add message to existing thread
 
-    thread_id = user_threads[user_id]
+    # The rest of the function remains largely the same
+    status = check_status(my_run_id, my_thread_id)
+    while status != "completed":
+        status = check_status(my_run_id, my_thread_id)
+        time.sleep(2)
 
-    # Add the user's message to the thread
+    response = openai.beta.threads.messages.list(thread_id=my_thread_id)
+    if response.data:
+        bot_response = response.data[0].content[0].text.value
+        update.message.reply_text(bot_response)
+
+# New function to add a message to an existing thread
+def add_to_thread(thread_id, prompt):
     openai.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
-        content=user_input
+        content=prompt
     )
-
-    # Run the thread with the assistant
     run = openai.beta.threads.runs.create(
         thread_id=thread_id,
-        assistant_id=assistant_id
+        assistant_id=assistant_id,
     )
-
-    # Check the status of the run
-    while True:
-        run_status = openai.beta.threads.runs.retrieve(
-            thread_id=thread_id,
-            run_id=run.id
-        ).status
-        if run_status == "completed":
-            break
-        time.sleep(2)
-
-    # Get the last message from the thread
-    response = openai.beta.threads.messages.list(thread_id=thread_id)
-    if response.data:
-        # Assuming the last message is the bot's response
-        bot_response = response.data[-1].content[0].text.value
-        update.message.reply_text(bot_response)
+    return run.id
 
 
 def start(update, context):
