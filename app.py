@@ -11,6 +11,13 @@ telegram_token = os.getenv('TELEGRAM_TOKEN')
 # Dictionary to store user threads
 user_threads = {}
 
+def check_status(run_id, thread_id):
+    run = openai.beta.threads.runs.retrieve(
+        thread_id=thread_id,
+        run_id=run_id,
+    )
+    return run.status
+
 def create_thread(ass_id, prompt):
     # Function implementation
     thread = openai.beta.threads.create()
@@ -27,6 +34,7 @@ def create_thread(ass_id, prompt):
         assistant_id=ass_id,
     )
     return run.id, my_thread_id
+
 
 def handle_message(update, context):
     user_id = update.message.from_user.id  # Get the unique user ID
