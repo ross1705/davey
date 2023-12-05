@@ -11,20 +11,22 @@ telegram_token = os.getenv('TELEGRAM_TOKEN')
 # Dictionary to store user threads
 user_threads = {}
 
-def get_or_create_thread(user_id, initial_prompt):
-    if user_id in user_threads:
-        return user_threads[user_id]
-    else:
-        # Create a new thread with the initial message
-        thread = openai.beta.threads.create(
-            messages=[{
-                "role": "user",
-                "content": initial_prompt
-            }]
-        )
-        thread_id = thread.id
-        user_threads[user_id] = thread_id
-        return thread_id
+def create_thread(ass_id, prompt):
+    # Function implementation
+    thread = openai.beta.threads.create()
+    my_thread_id = thread.id
+
+    openai.beta.threads.messages.create(
+        thread_id=my_thread_id,
+        role="user",
+        content=prompt
+    )
+
+    run = openai.beta.threads.runs.create(
+        thread_id=my_thread_id,
+        assistant_id=ass_id,
+    )
+    return run.id, my_thread_id
 
 def handle_message(update, context):
     user_id = update.message.from_user.id  # Get the unique user ID
