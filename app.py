@@ -29,7 +29,19 @@ def get_or_create_thread(user_id, initial_prompt):
 def handle_message(update, context):
     user_input = update.message.text
     user_id = update.message.from_user.id
-    thread_id = get_or_create_thread(user_id, user_input)
+
+    # Check if the user already has an active thread
+    if user_id not in user_threads:
+        # Create a new thread with the initial message
+        thread = openai.beta.threads.create(
+            messages=[{
+                "role": "user",
+                "content": user_input
+            }]
+        )
+        user_threads[user_id] = thread.id
+
+    thread_id = user_threads[user_id]
 
     # Add the user's message to the thread
     openai.beta.threads.messages.create(
@@ -43,12 +55,24 @@ def handle_message(update, context):
         thread_id=thread_id,
         assistant_id=assistant_id
     )
-    # Wait for the response
-    time.sleep(2)
+
+    # Check the status of the run
+    while True:
+        run_status = openai.beta.threads.runs.retrieve(
+            thread_id=thread_id,
+            run_id=run.id
+        ).status
+        if run_status == "completed":
+            break
+        time.sleep(2)
+
+    # Get the last message from the thread
     response = openai.beta.threads.messages.list(thread_id=thread_id)
     if response.data:
+        # Assuming the last message is the bot's response
         bot_response = response.data[-1].content[0].text.value
         update.message.reply_text(bot_response)
+
 
 def start(update, context):
     update.message.reply_text('Hello! How can I assist you today?')
