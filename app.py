@@ -17,14 +17,20 @@ telegram_token = os.getenv('TELEGRAM_TOKEN')
 # Dictionary to store user threads
 user_threads = {}
 
-def save_conversation(user_id, user_input, bot_response):
+def save_conversation(user_id, user_input, bot_response, message_id):
     with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
         with conn.cursor() as cursor:
+            # Check if the record already exists based on message_id
             cursor.execute('''
-                INSERT INTO conversations (user_id, user_input, bot_response)
-                VALUES (%s, %s, %s)
-            ''', (user_id, user_input, bot_response))
-            conn.commit()
+                SELECT 1 FROM conversations WHERE message_id = %s
+            ''', (message_id,))
+            if cursor.fetchone() is None:
+                # Record does not exist, so insert it
+                cursor.execute('''
+                    INSERT INTO conversations (user_id, user_input, bot_response, message_id)
+                    VALUES (%s, %s, %s, %s)
+                ''', (user_id, user_input, bot_response, message_id))
+                conn.commit()
 
 def check_status(run_id, thread_id):
     run = openai.beta.threads.runs.retrieve(
@@ -54,6 +60,7 @@ def create_thread(ass_id, prompt):
 def handle_message(update, context):
     user_id = update.message.from_user.id  # Get the unique user ID
     user_input = update.message.text
+    message_id = update.message.message_id  # Get the unique message ID from the update
 
     if user_id not in user_threads:
         # If this user doesn't have a thread yet, create one
@@ -76,7 +83,7 @@ def handle_message(update, context):
         print(f"Bot response: {bot_response}")
         update.message.reply_text(bot_response)
         # Save the conversation after sending the response
-        save_conversation(user_id, user_input, bot_response)
+        save_conversation(user_id, user_input, bot_response, message_id)
 
 # New function to add a message to an existing thread
 def add_to_thread(thread_id, prompt):
