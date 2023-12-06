@@ -5,8 +5,17 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import json
 import sqlite3
 
+# Set API keys
+openai.api_key = os.getenv('OPENAI_API_KEY')
+assistant_id = os.getenv('ASSISTANT_ID')
+telegram_token = os.getenv('TELEGRAM_TOKEN')
+
+# Dictionary to store user threads
+user_threads = {}
+
 def save_conversation(user_id, user_input, bot_response):
     try:
+        print(f"Saving conversation: user_id={user_id}, user_input={user_input}, bot_response={bot_response}")
         with sqlite3.connect('my_telegram_bot.db') as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -17,16 +26,7 @@ def save_conversation(user_id, user_input, bot_response):
     except sqlite3.Error as e:
         print(f"Database error: {e}")
     except Exception as e:
-        print(f"Exception in _query: {e}")
-
-
-# Set API keys
-openai.api_key = os.getenv('OPENAI_API_KEY')
-assistant_id = os.getenv('ASSISTANT_ID')
-telegram_token = os.getenv('TELEGRAM_TOKEN')
-
-# Dictionary to store user threads
-user_threads = {}
+        print(f"Exception in save_conversation: {e}")
 
 def check_status(run_id, thread_id):
     run = openai.beta.threads.runs.retrieve(
@@ -75,6 +75,7 @@ def handle_message(update, context):
     response = openai.beta.threads.messages.list(thread_id=my_thread_id)
     if response.data:
         bot_response = response.data[0].content[0].text.value
+        print(f"Bot response: {bot_response}")
         update.message.reply_text(bot_response)
         # Save the conversation after sending the response
         save_conversation(user_id, user_input, bot_response)
@@ -115,6 +116,7 @@ def main():
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
     updater.start_polling()
     updater.idle()
+    print("Database and table initialized successfully.")
 
 if __name__ == '__main__':
     main()
