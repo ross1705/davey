@@ -22,3 +22,4 @@ tornado==6.4
 tqdm==4.66.1
 typing_extensions==4.8.0
 tzlocal==5.2
+psycopg2-binary>=2.8
