@@ -3,7 +3,11 @@ import openai
 import time
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import json
-import sqlite3
+import os
+import psycopg2
+
+DATABASE_URL = os.environ['DATABASE_URL']
+conn = psycopg2.connect(DATABASE_URL, sslmode='require')
 
 # Set API keys
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -14,19 +18,13 @@ telegram_token = os.getenv('TELEGRAM_TOKEN')
 user_threads = {}
 
 def save_conversation(user_id, user_input, bot_response):
-    try:
-        print(f"Saving conversation: user_id={user_id}, user_input={user_input}, bot_response={bot_response}")
-        with sqlite3.connect('my_telegram_bot.db') as conn:
-            cursor = conn.cursor()
+    with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
+        with conn.cursor() as cursor:
             cursor.execute('''
                 INSERT INTO conversations (user_id, user_input, bot_response)
-                VALUES (?, ?, ?)
+                VALUES (%s, %s, %s)
             ''', (user_id, user_input, bot_response))
             conn.commit()
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"Exception in save_conversation: {e}")
 
 def check_status(run_id, thread_id):
     run = openai.beta.threads.runs.retrieve(
@@ -98,17 +96,19 @@ def start(update, context):
     update.message.reply_text('Hello! How can I assist you today?')
 
 def main():
-    with sqlite3.connect('my_telegram_bot.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS conversations (
-                user_id INTEGER,
-                user_input TEXT,
-                bot_response TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        conn.commit()
+    # Connect to Heroku Postgres
+    with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
+        with conn.cursor() as cursor:
+            # Create a table (if not exists)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS conversations (
+                    user_id INTEGER,
+                    user_input TEXT,
+                    bot_response TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
     
     updater = Updater(telegram_token, use_context=True)
     dp = updater.dispatcher
