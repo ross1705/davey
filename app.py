@@ -124,6 +124,7 @@ def start(update, context):
         "Most of my recipes come with a video, just ask me for it if I forget to give it to you.",
         "It's a good idea to watch these videos before cooking if you have a chance, so that you can get a better idea of what you are cooking!",
         "Again, please give me all of the feedback you can; good or bad (even better if it's bad). Hope I can be of some help!"
+        "Now, ready to plan your dinners for next week?"
     ]
 
     for msg in messages:
