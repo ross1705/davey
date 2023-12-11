@@ -35,7 +35,7 @@ def get_thread_id(user_id):
     with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
         with conn.cursor() as cursor:
             cursor.execute('''
-                SELECT thread_id FROM conversations WHERE user_id = %s LIMIT 1
+                SELECT thread_id FROM user_threads WHERE user_id = %s
             ''', (user_id,))
             result = cursor.fetchone()
             return result[0] if result else None
@@ -44,11 +44,12 @@ def save_thread_id(user_id, thread_id):
     with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
         with conn.cursor() as cursor:
             cursor.execute('''
-                INSERT INTO conversations (user_id, thread_id)
+                INSERT INTO user_threads (user_id, thread_id)
                 VALUES (%s, %s)
                 ON CONFLICT (user_id) DO UPDATE SET thread_id = EXCLUDED.thread_id
             ''', (user_id, thread_id))
             conn.commit()
+
 
 def check_status(run_id, thread_id):
     run = openai.beta.threads.runs.retrieve(
@@ -137,13 +138,21 @@ def main():
     # Connect to Heroku Postgres
     with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
         with conn.cursor() as cursor:
-            # Create a table (if not exists)
+            # Create conversations table (if not exists)
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS conversations (
                     user_id INTEGER,
+                    thread_id TEXT,
                     user_input TEXT,
                     bot_response TEXT,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            # Create user_threads table (if not exists)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_threads (
+                    user_id INTEGER PRIMARY KEY,
+                    thread_id TEXT
                 )
             ''')
             conn.commit()
