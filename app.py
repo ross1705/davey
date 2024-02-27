@@ -136,7 +136,7 @@ def start(update, context):
 
 def main():
     # Connect to Render's PostgreSQL database
-    database_url = os.getenv('RENDER_DATABASE_URL')  # Ensure this environment variable is set in Render
+    database_url = os.getenv('DATABASE_URL')  # Ensure this environment variable is set in Render
     with psycopg2.connect(database_url, sslmode='require') as conn:
         with conn.cursor() as cursor:
             # Create conversations table (if not exists)
