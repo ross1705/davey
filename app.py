@@ -6,7 +6,7 @@ import json
 import os
 import psycopg2
 
-DATABASE_URL="postgres://davey_db_user:xHVilK1rpGdHC08W5jIS8l71eDckCZWE@dpg-cnf25ked3nmc73f0vrh0-a/davey_db"
+DATABASE_URL="postgres://davey_db_user:xHVilK1rpGdHC08W5jIS8l71eDckCZWE@dpg-cnf25ked3nmc73f0vrh0-a.oregon-postgres.render.com/davey_db"
 conn = psycopg2.connect(DATABASE_URL, sslmode='require')
 
 # Set API keys
