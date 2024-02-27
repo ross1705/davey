@@ -135,8 +135,9 @@ def start(update, context):
 
 
 def main():
-    # Connect to Heroku Postgres
-    with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
+    # Connect to Render's PostgreSQL database
+    database_url = os.getenv('RENDER_DATABASE_URL')  # Ensure this environment variable is set in Render
+    with psycopg2.connect(database_url, sslmode='require') as conn:
         with conn.cursor() as cursor:
             # Create conversations table (if not exists)
             cursor.execute('''
@@ -156,7 +157,7 @@ def main():
                 )
             ''')
             conn.commit()
-    
+
     updater = Updater(telegram_token, use_context=True)
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
