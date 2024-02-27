@@ -6,7 +6,7 @@ import json
 import os
 import psycopg2
 
-DATABASE_URL = os.environ['DATABASE_URL']
+DATABASE_URL="postgres://davey_db_user:xHVilK1rpGdHC08W5jIS8l71eDckCZWE@dpg-cnf25ked3nmc73f0vrh0-a/davey_db"
 conn = psycopg2.connect(DATABASE_URL, sslmode='require')
 
 # Set API keys
@@ -127,7 +127,6 @@ def start(update, context):
         "Again, please give me all of the feedback you can; good or bad (even better if it's bad). Hope I can be of some help!"
         "Now, ready to plan your dinners for next week?"
     ]
-
     for msg in messages:
         update.message.reply_text(msg)
         time.sleep(5)  # Optional: Add a short delay between messages
