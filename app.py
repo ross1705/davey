@@ -18,6 +18,7 @@ telegram_token = os.getenv('TELEGRAM_TOKEN')
 user_threads = {}
 
 def save_conversation(user_id, user_input, bot_response, message_id):
+    print("Database URL:", os.getenv('DATABASE_URL'))
     with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
         with conn.cursor() as cursor:
             # Check if the record already exists based on message_id
