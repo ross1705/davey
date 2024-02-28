@@ -5,15 +5,15 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import json
 import os
 import psycopg2
+from decouple import config
 
-DATABASE_URL = os.environ['DATABASE_URL']
+DATABASE_URL = config('DATABASE_URL', cast=str)
 conn = psycopg2.connect(DATABASE_URL, sslmode='require')
 
 # Set API keys
-openai.api_key = os.getenv('OPENAI_API_KEY')
-assistant_id = os.getenv('ASSISTANT_ID')
-telegram_token = os.getenv('TELEGRAM_TOKEN')
-DATABASE_URL = os.environ['DATABASE_URL']
+openai.api_key = config('OPENAI_API_KEY', cast=str)
+assistant_id = config('ASSISTANT_ID', cast=str)
+telegram_token = config('TELEGRAM_TOKEN', cast=str)
 
 # Dictionary to store user threads
 user_threads = {}
@@ -158,18 +158,11 @@ def main():
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-    # Set up webhook
-    PORT = int(os.environ.get('PORT', '8443'))  # Use the port assigned by Render or a default
-    WEBHOOK_URL = 'https://telerec.onrender.com/' + telegram_token  # Your Render URL with a unique path
-
-    # Start the bot with webhook
-    updater.start_webhook(listen="0.0.0.0",
-                          port=PORT,
-                          url_path=telegram_token,
-                          webhook_url=WEBHOOK_URL)
-
+    
+    # Start the bot
+    updater.start_polling()
     updater.idle()
+    print("Bot is running and database tables are initialized.")
 
 if __name__ == '__main__':
     main()
