@@ -13,24 +13,20 @@ conn = psycopg2.connect(DATABASE_URL, sslmode='require')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 assistant_id = os.getenv('ASSISTANT_ID')
 telegram_token = os.getenv('TELEGRAM_TOKEN')
+DATABASE_URL = os.environ['DATABASE_URL']
 
 # Dictionary to store user threads
 user_threads = {}
 
-def save_conversation(user_id, user_input, bot_response, message_id):
+def save_conversation(user_id, user_input, bot_response, message_id, thread_id):
     with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
         with conn.cursor() as cursor:
-            # Check if the record already exists based on message_id
             cursor.execute('''
-                SELECT 1 FROM conversations WHERE message_id = %s
-            ''', (message_id,))
-            if cursor.fetchone() is None:
-                # Record does not exist, so insert it
-                cursor.execute('''
-                    INSERT INTO conversations (user_id, user_input, bot_response, message_id)
-                    VALUES (%s, %s, %s, %s)
-                ''', (user_id, user_input, bot_response, message_id))
-                conn.commit()
+                INSERT INTO conversations (user_id, user_input, bot_response, message_id, thread_id)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, user_input, bot_response, message_id, thread_id))
+            conn.commit()
+
 def get_thread_id(user_id):
     with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
         with conn.cursor() as cursor:
@@ -100,7 +96,8 @@ def handle_message(update, context):
         bot_response = response.data[0].content[0].text.value
         print(f"Bot response: {bot_response}")
         update.message.reply_text(bot_response)
-        save_conversation(user_id, user_input, bot_response, message_id)
+        save_conversation(user_id, user_input, bot_response, message_id, my_thread_id)
+
 
 # New function to add a message to an existing thread
 def add_to_thread(thread_id, prompt):
@@ -118,14 +115,9 @@ def add_to_thread(thread_id, prompt):
 
 def start(update, context):
     messages = [
-        "Hello! My name is Remi, and I'm going to help you plan your dinners for the week🍽️",
-        "Feel free to ask for recipes or suggestions. I'll also prepare a handy shopping list for you. 📝",
-        "When it's cooking time, just tell me, and I'll guide you through each recipe step-by-step. 👩‍🍳",
-        "Please be patient with me as I am not the fastest typer, and it can take me up to a minute to reply. I also might make some mistakes, so please let me know if I do!",
-        "Most of my recipes come with a video, just ask me for it if I forget to give it to you.",
-        "It's a good idea to watch these videos before cooking if you have a chance, so that you can get a better idea of what you are cooking!",
-        "Again, please give me all of the feedback you can; good or bad (even better if it's bad). Hope I can be of some help!"
-        "Now, ready to plan your dinners for next week?"
+        "Hello and welcome! 👋 I'm your dedicated Gut Health Guide from the team at Happy Feet, here to support you in managing your gut health and IBS symptoms with nutritious and delicious meal planning. 🥗 While I might take a moment to respond (up to a minute), I'm continuously learning to be quicker and more helpful."
+        "Think of me as your personal nutritional helper. You can ask me things like 'I'm trying to ease my IBS symptoms, what should I have for lunch?' or 'Can you suggest a gut-friendly snack that's easy to prepare?', or 'How much fibre was in that lentil bolognese'. I'm here to answer all your queries about gut health, low FODMAP diets, and IBS-friendly meals. 🍲"
+        "To start, just share your dietary preferences, any specific gut health concerns, and what you're aiming for in your diet. Whether it's managing symptoms, trying new recipes, or seeking nutritional advice, I'm here to help. So, what can I help you with today?"
     ]
     for msg in messages:
         update.message.reply_text(msg)
@@ -134,39 +126,43 @@ def start(update, context):
 
 
 def main():
-    # Connect to Render's PostgreSQL database
-    database_url = os.getenv('DATABASE_URL')  # Ensure this environment variable is set in Render
-    with psycopg2.connect(database_url, sslmode='require') as conn:
-        with conn.cursor() as cursor:
-            # Create conversations table (if not exists)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS conversations (
-                    user_id INTEGER,
-                    thread_id TEXT,
-                    user_input TEXT,
-                    bot_response TEXT,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            # Create user_threads table (if not exists)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS user_threads (
-                    user_id INTEGER PRIMARY KEY,
-                    thread_id TEXT
-                )
-            ''')
-            conn.commit()
-    telegram_token = os.getenv('TELEGRAM_TOKEN')
-    if telegram_token is None:
-        print("Error: TELEGRAM_TOKEN environment variable not set.")
-        return
+    # Initialize database tables if they don't exist.
+    try:
+        with psycopg2.connect(DATABASE_URL, sslmode='require') as conn:
+            with conn.cursor() as cursor:
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        user_id INTEGER NOT NULL,
+                        user_input TEXT,
+                        bot_response TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        message_id INTEGER,
+                        thread_id TEXT
+                    );
+                ''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS user_threads (
+                        user_id INTEGER PRIMARY KEY,
+                        thread_id TEXT
+                    );
+                ''')
+                conn.commit()
+    except psycopg2.Error as e:
+        print(f"Database error: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+    # Set up Telegram bot handlers
     updater = Updater(telegram_token, use_context=True)
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    
+    # Start the bot
     updater.start_polling()
     updater.idle()
-    print("Database and table initialized successfully.")
+    print("Bot is running and database tables are initialized.")
 
 if __name__ == '__main__':
     main()
