@@ -10,9 +10,10 @@ DATABASE_URL="postgres://davey_db_user:xHVilK1rpGdHC08W5jIS8l71eDckCZWE@dpg-cnf2
 conn = psycopg2.connect(DATABASE_URL, sslmode='require')
 
 # Set API keys
-openai.api_key = os.getenv('OPENAI_API_KEY')
-assistant_id = os.getenv('ASSISTANT_ID')
-telegram_token = os.getenv('TELEGRAM_TOKEN')
+ASSISTANT_ID="asst_9ub2gNzyKMNLC6fbIRgXqT8g"
+DATABASE_URL="postgres://davey_db_user:xHVilK1rpGdHC08W5jIS8l71eDckCZWE@dpg-cnf25ked3nmc73f0vrh0-a/davey_db"
+OPENAI_API_KEY="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"
+TELEGRAM_TOKEN="6878254005:AAFMd3HS9KMKW6lzvYSNMSV3lh27jgBFuOs"
 
 # Dictionary to store user threads
 user_threads = {}
