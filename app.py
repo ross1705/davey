@@ -158,11 +158,18 @@ def main():
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-    
-    # Start the bot
-    updater.start_polling()
+
+    # Set up webhook
+    PORT = int(os.environ.get('PORT', '8443'))  # Use the port assigned by Render or a default
+    WEBHOOK_URL = 'https://telerec.onrender.com/' + telegram_token  # Your Render URL with a unique path
+
+    # Start the bot with webhook
+    updater.start_webhook(listen="0.0.0.0",
+                          port=PORT,
+                          url_path=telegram_token,
+                          webhook_url=WEBHOOK_URL)
+
     updater.idle()
-    print("Bot is running and database tables are initialized.")
 
 if __name__ == '__main__':
     main()
